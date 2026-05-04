@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Log File Submission and Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2em;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 300px;
+            margin-top: 1em;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        #soapbox {
+            width: auto;
+            max-width: none;
+            height: 60px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Submit and Edit Log File</h1>
+    <form id="logForm">
+        <label for="logFile">Select log file:</label>
+        <input type="file" id="logFile" accept=".adif,.adi">
+        <button type="button" onclick="loadFile()">Load File</button>
+    </form>
+
+    <div id="CabrilloLog" class="hidden">
+        <h2>Cabrillo Log</h2>
+        <p>This section will display the Cabrillo log format once the ADIF file is loaded and parsed.</p>
+        <table id="cabrilloHeaderTable">
+            <tr>
+                <td>START-OF-LOG: 3.0</td>
+            </tr>
+            <tr>
+                <td>CONTEST: DE-QSO-PARTY</td>
+            </tr>
+            <tr>
+                <td>LOCATION: </td>
+                <td><select id="section-select" onchange="updateCabrilloBodyTable()">
+                <!-- ARRL Sections -->
+                <option value="???">Please Select Your Location</option>
+                <option value="NDE">New Castle County DE</option>
+                <option value="KDE">Kent County DE</option>
+                <option value="SDE">Sussex County DE</option>
+                <option value="MA">Massachusetts (MA)</option>
+                <option value="CT">Connecticut (CT)</option>
+                <option value="ME">Maine (ME)</option>
+                <option value="NH">New Hampshire (NH)</option>
+                <option value="RI">Rhode Island (RI)</option>
+                <option value="VT">Vermont (VT)</option>
+                <option value="NY">New York (NY)</option>
+                <option value="NJ">New Jersey (NJ)</option>
+                <option value="PA">Pennsylvania (PA)</option>
+                <option value="MD">Maryland (MD)</option>
+                <option value="DC">Washington DC (MD)</option>
+                <option value="VA">Virginia (VA)</option>
+                <option value="WV">West Virginia (WV)</option>
+                <option value="NC">North Carolina (NC)</option>
+                <option value="SC">South Carolina (SC)</option>
+                <option value="GA">Georgia (GA)</option>
+                <option value="FL">Florida (FL)</option>
+                <option value="AL">Alabama (AL)</option>
+                <option value="MS">Mississippi (MS)</option>
+                <option value="TN">Tennessee (TN)</option>
+                <option value="KY">Kentucky (KY)</option>
+                <option value="OH">Ohio (OH)</option>
+                <option value="MI">Michigan (MI)</option>
+                <option value="IN">Indiana (IN)</option>
+                <option value="IL">Illinois (IL)</option>
+                <option value="WI">Wisconsin (WI)</option>
+                <option value="MN">Minnesota (MN)</option>
+                <option value="IA">Iowa (IA)</option>
+                <option value="MO">Missouri (MO)</option>
+                <option value="AR">Arkansas (AR)</option>
+                <option value="LA">Louisiana (LA)</option>
+                <option value="ND">North Dakota (ND)</option>
+                <option value="SD">South Dakota (SD)</option>
+                <option value="NE">Nebraska (NE)</option>
+                <option value="KS">Kansas (KS)</option>
+                <option value="OK">Oklahoma (OK)</option>
+                <option value="TX">Texas (TX)</option>
+                <option value="NM">New Mexico (NM)</option>
+                <option value="CO">Colorado (CO)</option>
+                <option value="WY">Wyoming (WY)</option>
+                <option value="MT">Montana (MT)</option>
+                <option value="ID">Idaho (ID)</option>
+                <option value="UT">Utah (UT)</option>
+                <option value="AZ">Arizona (AZ)</option>
+                <option value="NV">Nevada (NV)</option>
+                <option value="WA">Washington (WA)</option>
+                <option value="OR">Oregon (OR)</option>
+                <option value="CA">California (CA)</option>
+                <option value="HI">Hawaii (HI)</option>
+                <option value="AK">Alaska (AK)</option>
+                <option value="VI">Virgin Islands (VI)</option>
+                <option value="PR">Puerto Rico (PR)</option>
+                <!-- Canadian Provinces and territories -->
+                <option value="NL">Newfoundland and Labrador (NL)</option>
+                <option value="PE">Prince Edward Island (PE)</option>
+                <option value="NS">Nova Scotia (NS)</option>
+                <option value="NB">New Brunswick (NB)</option>
+                <option value="QC">Quebec (QC)</option>
+                <option value="ON">Ontario (ON)</option>
+                <option value="MB">Manitoba (MB)</option>
+                <option value="SK">Saskatchewan (SK)</option>
+                <option value="AB">Alberta (AB)</option>
+                <option value="BC">British Columbia (BC)</option>
+                <option value="NT">Northwest Territories (NT)</option>
+                <option value="NU">Nunavut (NU)</option>
+                <option value="YT">Yukon (YT)</option>
+                <!-- DX -->
+                <option value="DX">DX (International)</option>
+            </select></td>
+                <td id="dxcc-container" style="display: none;"><input type="text" id="DXCC" name="countryCode" placeholder="DX County Code"></td>
+            </tr>
+            <tr>
+                <td>CALLSIGN: </td>
+                <td><input type="text" id="callsign" name="fullName" placeholder="Enter your call sign"></td>
+            </tr>
+            <tr>
+                <td>CATEGORY-OPERATOR:</td>
+                <td><input list="operator" name="contestOperator" />
+                    <datalist id="operator">
+                        <option value="Single-Op">
+                        <option value="Multi-Op">
+                        <option value="Checklog">
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td>CATEGORY-POWER: </td>
+                <td><input list="power" name="catagoryPower" />
+                    <datalist id="power">
+                        <option intValue="1" value="HIGH">(>100w)</option>
+                        <option intValue="2" value="LOW">(<=100w)</option>
+                        <option intValue="3" value="QRP">(< = 5w)</option>
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td>CLUB: </td>
+                <td><input type="text" id="club" name="club" placeholder="Optional Club Name"></td>
+            </tr>
+            <tr>
+                <td>NAME: </td>
+                <td><input type="text" id="name" name="name" placeholder="Your Name"></td>
+            </tr>
+            <tr>
+                <td>EMAIL: </td>
+                <td><input type="text" id="email" name="email" placeholder="Your email"></td>
+            </tr>
+            <tr>
+                <td>OPERATORS: </td>
+                <td><input type="text" id="operators" name="club" placeholder="Station Operators"></td>
+            </tr>
+            <tr>
+                <td>SOAPBOX: </td>
+                <td>
+                    <textarea id="soapbox" rows="3" cols="80" style="resize:vertical;"></textarea>
+                </td>
+            </tr>
+        </table>
+
+    </div>
+
+    <div id="editorSection" class="hidden">
+        <h2>Edit Log File</h2>
+        <table id="cabrilloBodyTable" />
+        <button id="toggleEditorBtn" type="button" onclick="toggleEditor()">Show Uploaded Log</button>
+        <textarea id="logEditor" class="hidden"></textarea>
+        <script>
+            function toggleEditor() {
+                const editor = document.getElementById('logEditor');
+                const btn = document.getElementById('toggleEditorBtn');
+                if (editor.classList.contains('hidden')) {
+                    editor.classList.remove('hidden');
+                    btn.textContent = 'Hide Uploaded Log';
+                } else {
+                    editor.classList.add('hidden');
+                    btn.textContent = 'Show Uploaded Log';
+                }
+            }
+        </script>
+        <br>
+        <button id="toggleCabrilloBtn" type="button" onclick="toggleCabrillo()">Show Cabrillo Log</button>
+        <textarea id="logCabrillo" class="hidden"></textarea>
+        <script>
+            function toggleCabrillo() {
+                const Cabrillo = document.getElementById('logCabrillo');
+                const btn = document.getElementById('toggleCabrilloBtn');
+                if (Cabrillo.classList.contains('hidden')) {
+                    let formattedText = getCabrilloLog();
+                    document.getElementById('logCabrillo').value = formattedText;
+
+                    Cabrillo.classList.remove('hidden');
+                    btn.textContent = 'Hide Cabrillo Log';
+                } else {
+                    Cabrillo.classList.add('hidden');
+                    btn.textContent = 'Show Cabrillo Log';
+                }
+            }
+        </script>
+        <br>
+        <button onclick="saveFile()">Save Edited Log</button>
+    </div>
+
+    <script>
+        document.getElementById('section-select').addEventListener('change', function() {
+            const dxccContainer = document.getElementById('dxcc-container');
+            if (this.value === 'DX') {
+                dxccContainer.style.display = 'block';
+            } else {
+                dxccContainer.style.display = 'none';
+            }
+        });
+    </script>
+    <script>
+        /**
+         * A class for parsing ADIF data into usable data structures.
+         */
+        class AdifParser {
+            adi;
+            /**
+             * Parse the given ADIF data string into an object.
+             */
+            static parseAdif(adi) {
+                return new AdifParser(adi).parseTopLevel();
+            }
+            cursor = 0;
+            constructor(adi) {
+                this.adi = adi;
+            }
+            parseTopLevel() {
+                const parsed = {};
+                if (this.adi.length === 0) {
+                    return parsed;
+                }
+                // Header
+                if (this.adi[0] !== '<') {
+                    const header = {};
+                    header['text'] = this.parseHeaderText();
+                    while (this.cursor < this.adi.length) {
+                        const endOfHeader = this.parseTagValue(header);
+                        if (endOfHeader) {
+                            break;
+                        }
+                    }
+                    parsed.header = header;
+                }
+                // QSO Records
+                const records = new Array();
+                while (this.cursor < this.adi.length) {
+                    const record = this.parseRecord();
+                    if (Object.keys(record).length > 0) {
+                        records.push(record);
+                    }
+                }
+                if (records.length > 0) {
+                    parsed.records = records;
+                }
+                return parsed;
+            }
+            parseHeaderText() {
+                const startTag = this.adi.indexOf('<', this.cursor);
+                this.cursor = startTag;
+                return this.adi.substring(0, startTag).trim();
+            }
+            parseRecord() {
+                const record = {};
+                while (this.cursor < this.adi.length) {
+                    const endOfRecord = this.parseTagValue(record);
+                    if (endOfRecord) {
+                        break;
+                    }
+                }
+                return record;
+            }
+            parseTagValue(record) {
+                const startTag = this.adi.indexOf('<', this.cursor);
+                if (startTag === -1) {
+                    this.cursor = this.adi.length;
+                    return true;
+                }
+                const endTag = this.adi.indexOf('>', startTag);
+                const tagParts = this.adi.substring(startTag + 1, endTag).split(':');
+                if (tagParts[0].toLowerCase() === 'eor' ||
+                    tagParts[0].toLowerCase() === 'eoh') {
+                    this.cursor = endTag + 1;
+                    return true;
+                } else if (tagParts.length < 2) {
+                    if (this.adi.substring(startTag + 1, endTag) === 'APP_LoTW_EOF') {
+                        this.cursor = endTag + 1;
+                        return true;
+                    }
+                    throw new Error('Encountered field tag without enough parts near char ' +
+                        startTag +
+                        ': ' +
+                        this.adi.substring(startTag + 1, startTag + 80) +
+                        '\n');
+                }
+                const fieldName = tagParts[0].toLowerCase();
+                const width = +tagParts[1];
+                record[fieldName] = this.adi.substr(endTag + 1, width);
+                this.cursor = endTag + 1 + width;
+                return false;
+            }
+        }
+    </script>
+    <script>
+        let parsedAdif = null;
+        async function loadFile() {
+            const fileInput = document.getElementById('logFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a log file.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const adifText = e.target.result;
+                // Parse ADIF using AdifParser
+                try {
+                    parsedAdif = parseAdif(adifText);
+                } catch (err) {
+                    alert('Error parsing ADIF file: ' + err.message);
+                    return;
+                }
+                // Show parsed ADIF as JSON for now
+                document.getElementById('logEditor').value = JSON.stringify(parsedAdif, null, 2);
+                document.getElementById('editorSection').classList.remove('hidden');
+                populateExchangeFields(parsedAdif);
+                const firstRecord = parsedAdif.records[0];
+                // Try 'station_callsign', fallback to 'call'
+                const callsign = getCallSent(firstRecord) || '';
+                document.getElementById('callsign').value = callsign.toUpperCase();
+                const operatorName = firstRecord['my_name'] || '';
+                document.getElementById('name').value = operatorName.toUpperCase();
+
+                fillCabrilloBodyTable(parsedAdif.records);
+                document.getElementById('CabrilloLog').classList.remove('hidden');
+            };
+            reader.readAsText(file);
+        }
+
+        function updateCabrilloBodyTable() {
+            const newValue = document.getElementById('section-select').value
+            const table = document.getElementById('cabrilloBodyTable');
+            for (let i = 2; i < table.rows.length; i++) {
+                const row = table.rows[i];
+                // Check if the row has at least 8 columns
+                if (row.cells.length > 7) {
+                    row.cells[7].textContent = newValue;
+                }
+            }
+        }
+        // Assuming records is an array of ADIF records parsed by AdifParser
+        function fillCabrilloBodyTable(records) {
+            try {
+                if (!records || !Array.isArray(records) || records.length === 0) {
+                    throw new Error('No records to display in Cabrillo table.');
+                }
+            } catch (error) {
+                console.error(error);
+                return;
+            }
+            const table = document.getElementById('cabrilloBodyTable');
+            table.innerHTML = ''; // Clear previous rows
+
+            // Create table header (customize as needed)
+            var header = table.insertRow();
+            ['QSO:', 'freq', 'mode', 'date', 'time', 'call', 'rst', 'exch', 'call', 'rst', 'exch'].forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                header.appendChild(th);
+            });
+            var header = table.insertRow();
+            ['QSO:', '*****', '**', 'yyyy-mm-dd', 'nnnn', '************', 'nnn', '****', '************', 'nnn', '****'].forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                header.appendChild(th);
+            });
+
+            // Add rows for each record
+            records.forEach(record => {
+                const row = table.insertRow();
+                row.insertCell().textContent = 'QSO: ';
+                row.insertCell().textContent = getFrequency(record);
+                row.insertCell().textContent = getMode(record);
+                row.insertCell().textContent = getDate(record);
+                row.insertCell().textContent = getTime(record);
+                row.insertCell().textContent = getCallSent(record);
+                row.insertCell().textContent = getRstSent(record);
+                row.insertCell().textContent = getExchSent(record);
+
+                row.insertCell().textContent = getCallRecieved(record);
+                row.insertCell().textContent = getRstRecieved(record);
+                const exchCell = row.insertCell();
+                exchCell.contentEditable = true;
+                exchCell.textContent = getExchRecieved(record);
+                exchCell.addEventListener('input', function() {
+                    const value = exchCell.textContent.trim();
+                    if (/^[A-Z]{2,3}$/.test(value)) {
+                        exchCell.style.backgroundColor = '';
+                    } else {
+                        exchCell.style.backgroundColor = '#ffcccc';
+                    }
+                });
+            });
+        }
+
+        function getCallSent(record) {
+            // Attempt to get call from 'station_callsign' field
+            if (record['station_callsign']) {
+                return record['station_callsign'].toUpperCase();
+            }
+            if (record['operator']) {
+                return record['operator'].toUpperCase();
+            }
+            //  return a default value
+            return 'UNKNOWN';
+        }
+
+        function getCallRecieved(record) {
+            // Attempt to get call from 'call' field
+            if (record['call']) {
+                return record['call'].toUpperCase();
+            }
+            // If 'call' is not available, return a default value
+            return 'UNKNOWN';
+        }
+
+        function getRstSent(record) {
+            // Attempt to get RST from 'rst_sent' field
+            if (record['rst_sent']) {
+                return record['rst_sent'];
+            }
+            // If 'rst_sent' is not available, return a default value
+            return '59';
+        }
+
+        function getRstRecieved(record) {
+            // Attempt to get RST from 'rst_rcvd' field
+            if (record['rst_rcvd']) {
+                return record['rst_rcvd'];
+            }
+            // If 'rst_rcvd' is not available, return a default value
+            return '59';
+        }
+
+        function getExchRecieved(record) {
+            if (record['state'] && record['state'].length == 2) {
+                return record['state'];
+            }
+            if (record['country']) {
+                return countryNameToCode(record['country'].toUpperCase());
+            }
+            return '??';
+        }
+
+        function countryNameToCode(name) {
+            const countryMap = Object.fromEntries([
+                ['UNITED STATES', 'US'],
+                ['CANADA', 'CA'],
+                ['PUERTO RICO', 'PR'],
+                ['VIRGIN ISLANDS', 'VI'],
+                ['MEXICO', 'MX'],
+                ['JAPAN', 'JP'],
+                ['GERMANY', 'DE'],
+                ['FRANCE', 'FR'],
+                ['ENGLAND', 'GB'],
+                ['UNITED KINGDOM', 'GB'],
+                ['AUSTRALIA', 'AU'],
+                ['NEW ZEALAND', 'NZ'],
+                ['ITALY', 'IT'],
+                ['SPAIN', 'ES'],
+                ['NETHERLANDS', 'NL'],
+                ['SWEDEN', 'SE'],
+                ['NORWAY', 'NO'],
+                ['FINLAND', 'FI'],
+                ['RUSSIA', 'RU'],
+                ['CHINA', 'CN'],
+                ['INDIA', 'IN'],
+                ['BRAZIL', 'BR'],
+                ['ARGENTINA', 'AR'],
+                ['SOUTH AFRICA', 'ZA'],
+                ['POLAND', 'PL'],
+                ['CZECH REPUBLIC', 'CZ'],
+                ['HUNGARY', 'HU'],
+                ['ROMANIA', 'RO'],
+                ['GREECE', 'GR'],
+                ['TURKEY', 'TR'],
+                ['ISRAEL', 'IL'],
+                ['EGYPT', 'EG'],
+                ['THAILAND', 'TH'],
+                ['KOREA', 'KR'],
+                ['TAIWAN', 'TW'],
+                ['HONG KONG', 'HK'],
+                ['SINGAPORE', 'SG'],
+                ['PHILIPPINES', 'PH'],
+                ['INDONESIA', 'ID'],
+                ['MALAYSIA', 'MY'],
+                ['VIETNAM', 'VN'],
+                ['DENMARK', 'DK'],
+                ['BELGIUM', 'BE'],
+                ['SWITZERLAND', 'CH'],
+                ['AUSTRIA', 'AT'],
+                ['IRELAND', 'IE'],
+                ['SCOTLAND', 'GB'],
+                ['WALES', 'GB'],
+                ['CUBA', 'CU'],
+                ['CHILE', 'CL'],
+                ['COLOMBIA', 'CO'],
+                ['PERU', 'PE'],
+                ['VENEZUELA', 'VE'],
+                ['URUGUAY', 'UY'],
+                ['PARAGUAY', 'PY'],
+                ['BOLIVIA', 'BO'],
+                ['ECUADOR', 'EC'],
+                ['GUATEMALA', 'GT'],
+                ['COSTA RICA', 'CR'],
+                ['PANAMA', 'PA'],
+                ['EL SALVADOR', 'SV'],
+                ['HONDURAS', 'HN'],
+                ['NICARAGUA', 'NI'],
+                ['DOMINICAN REPUBLIC', 'DO'],
+                ['HAITI', 'HT'],
+                ['JAMAICA', 'JM'],
+                ['TRINIDAD AND TOBAGO', 'TT'],
+                ['BARBADOS', 'BB'],
+                ['BAHAMAS', 'BS'],
+                ['ICELAND', 'IS'],
+                ['GREENLAND', 'GL'],
+                ['MONACO', 'MC'],
+                ['LUXEMBOURG', 'LU'],
+                ['LIECHTENSTEIN', 'LI'],
+                ['SLOVENIA', 'SI'],
+                ['SLOVAKIA', 'SK'],
+                ['CROATIA', 'HR'],
+                ['BULGARIA', 'BG'],
+                ['SERBIA', 'RS'],
+                ['MONTENEGRO', 'ME'],
+                ['BOSNIA AND HERZEGOVINA', 'BA'],
+                ['MACEDONIA', 'MK'],
+                ['ALBANIA', 'AL'],
+                ['ESTONIA', 'EE'],
+                ['LATVIA', 'LV'],
+                ['LITHUANIA', 'LT'],
+                ['BELARUS', 'BY'],
+                ['UKRAINE', 'UA'],
+                ['GEORGIA', 'GE'],
+                ['ARMENIA', 'AM'],
+                ['AZERBAIJAN', 'AZ'],
+                ['KAZAKHSTAN', 'KZ'],
+                ['UZBEKISTAN', 'UZ'],
+                ['KYRGYZSTAN', 'KG'],
+                ['TURKMENISTAN', 'TM'],
+                ['TAJIKISTAN', 'TJ'],
+                ['AFGHANISTAN', 'AF'],
+                ['PAKISTAN', 'PK'],
+                ['BANGLADESH', 'BD'],
+                ['SRI LANKA', 'LK'],
+                ['NEPAL', 'NP'],
+                ['MYANMAR', 'MM'],
+                ['CAMBODIA', 'KH'],
+                ['LAOS', 'LA'],
+                ['MONGOLIA', 'MN'],
+                ['IRAN', 'IR'],
+                ['IRAQ', 'IQ'],
+                ['SAUDI ARABIA', 'SA'],
+                ['UNITED ARAB EMIRATES', 'AE'],
+                ['QATAR', 'QA'],
+                ['KUWAIT', 'KW'],
+                ['OMAN', 'OM'],
+                ['YEMEN', 'YE'],
+                ['JORDAN', 'JO'],
+                ['LEBANON', 'LB'],
+                ['SYRIA', 'SY'],
+                ['MOROCCO', 'MA'],
+                ['ALGERIA', 'DZ'],
+                ['TUNISIA', 'TN'],
+                ['LIBYA', 'LY'],
+                ['SUDAN', 'SD'],
+                ['ETHIOPIA', 'ET'],
+                ['KENYA', 'KE'],
+                ['UGANDA', 'UG'],
+                ['TANZANIA', 'TZ'],
+                ['RWANDA', 'RW'],
+                ['BURUNDI', 'BI'],
+                ['SOMALIA', 'SO'],
+                ['DJIBOUTI', 'DJ'],
+                ['ERITREA', 'ER'],
+                ['GHANA', 'GH'],
+                ['NIGERIA', 'NG'],
+                ['SENEGAL', 'SN'],
+                ['MALI', 'ML'],
+                ['NIGER', 'NE'],
+                ['CHAD', 'TD'],
+                ['CAMEROON', 'CM'],
+                ['CENTRAL AFRICAN REPUBLIC', 'CF'],
+                ['CONGO', 'CG'],
+                ['DEMOCRATIC REPUBLIC OF THE CONGO', 'CD'],
+                ['GABON', 'GA'],
+                ['EQUATORIAL GUINEA', 'GQ'],
+                ['ANGOLA', 'AO'],
+                ['ZAMBIA', 'ZM'],
+                ['ZIMBABWE', 'ZW'],
+                ['MOZAMBIQUE', 'MZ'],
+                ['BOTSWANA', 'BW'],
+                ['NAMIBIA', 'NA'],
+                ['MADAGASCAR', 'MG'],
+                ['MAURITIUS', 'MU'],
+                ['SEYCHELLES', 'SC'],
+                ['FIJI', 'FJ'],
+                ['SAMOA', 'WS'],
+                ['TONGA', 'TO'],
+                ['VANUATU', 'VU'],
+                ['PAPUA NEW GUINEA', 'PG'],
+                ['SOLOMON ISLANDS', 'SB'],
+                ['MICRONESIA', 'FM'],
+                ['PALAU', 'PW'],
+                ['MARSHALL ISLANDS', 'MH'],
+                ['NAURU', 'NR'],
+                ['TUVALU', 'TV'],
+                ['KIRIBATI', 'KI'],
+                ['EAST TIMOR', 'TL']
+            ]);
+            if (!name) return '';
+            const key = name.trim().toUpperCase();
+            return countryMap[key] || 'DX'; // Default to 'DX' if not found
+        }
+
+        function getExchSent(record) {
+            // Attempt to get state from 'my_state' field
+            if (record['my_state']) {
+                switch (record['my_state']) {
+                    case 'DE':
+                        {
+                            if (record['my_county']) {}
+                            let county = record['my_cnty'];
+                            if (county.toLowerCase().includes('new castle')) {
+                                // If county is available, return it
+                                return 'NDE';
+                            }
+                            if (county.toLowerCase().includes('kent')) {
+                                // If county is available, return it
+                                return 'KDE';
+                            }
+                            if (county.toLowerCase().includes('sussex')) {
+                                // If county is available, return it
+                                return 'SDE';
+                            }
+
+                            return '*DE'
+                        }
+                    default:
+                        //Not DE
+                }
+                return record['my_state'].toUpperCase();
+            }
+            // If 'STATE' is not available, return ??
+            return '??';
+        }
+
+        function getTime(record) {
+            // Attempt to get time from 'TIME_ON' field
+            if (record['time_on']) {
+                let timeStr = record['time_on'];
+                if (/^\d{4}$/.test(timeStr) || /^\d{6}$/.test(timeStr)) {
+                    return `${timeStr.slice(0,2)}${timeStr.slice(2,4)}`;
+                } else {
+                    // Invalid time format
+                }
+            }
+            // If 'TIME_ON' is not available, return a default value
+            return 'nnnn';
+        }
+
+        function getDate(record) {
+            // Attempt to get date from 'QSO_DATE' field
+            if (record['qso_date']) {
+                dateStr = record['qso_date'];
+                if (!/^\d{8}$/.test(dateStr)) {
+                    // Invalid date format
+                } else {
+                    return `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)}`;
+                }
+            }
+            // If 'QSO_DATE' is not available, return a default value
+            return 'yyyy-mm-dd';
+        }
+
+        function getMode(record) {
+            // Attempt to get mode from 'MODE' field
+            if (record['mode']) {
+                switch (record['mode'].toLowerCase()) {
+                    case 'ssb':
+                    case 'usb':
+                    case 'lsb':
+                    case 'am':
+                    case 'fm':
+                        return 'PH';
+                    case 'cw':
+                        return 'CW';
+                    case 'rtty':
+                    case 'psk31':
+                    case 'ft8':
+                    default:
+                        return 'PS';
+                }
+                return record['mode'].toUpperCase();
+            }
+            // If 'MODE' is not available, return an Phone (PH) as default
+            return 'PH';
+        }
+
+        function getFrequency(record) {
+            // Attempt to get frequency from 'FREQ' field
+            if (record['freq']) {
+                var recordFreq = record['freq'];
+                var khz = recordFreq.substring(recordFreq.indexOf('.') + 1, recordFreq.indexOf('.') + 3);
+                while (khz.length < 3) {
+                    khz = khz + '0';
+                }
+                var mhz = recordFreq.substring(0, recordFreq.indexOf('.'));
+                recordFreq = mhz + khz;
+                if (!isNaN(recordFreq)) {
+                    return recordFreq;
+                }
+            }
+            // If 'FREQ' is not available, try to derive it from 'BAND'
+            const bandToFreq = {
+                '160M': '1800',
+                '80M': '3500',
+                '40M': '7000',
+                '20M': '14000',
+                '15M': '21000',
+                '10M': '28000',
+                '6M': '50000',
+                '2M': '144000',
+                '1.25M': '222000',
+                '70CM': '432000',
+                // Add more bands as needed
+            };
+            if (record['band'] && bandToFreq[record['band'].toUpperCase()]) {
+                return bandToFreq[record['band'].toUpperCase()];
+            }
+            return ''; // Return empty string if frequency cannot be determined
+        }
+        // Example usage after parsing ADIF
+        // fillCabrilloBodyTable(parsedRecords);
+        function parseAdif(adifText) {
+            // This function should be implemented in adif-parser.js
+            return AdifParser.parseAdif(adifText);
+        }
+
+        function saveFile() {
+            let formattedText = document.getElementById('logCabrillo').value
+            const blob = new Blob([formattedText], {
+                type: 'text/plain'
+            });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'edited_log.txt';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function getCabrilloLog() {
+            // Append Cabrillo headers before the body table
+            let headerText = '';
+            const headerTable = document.getElementById('cabrilloHeaderTable');
+            for (let i = 0; i < headerTable.rows.length; i++) {
+                const cells = headerTable.rows[i].cells;
+                let rowText = '';
+                for (let j = 0; j < cells.length; j++) {
+                    // For input/select fields, get their value
+                    const cell = cells[j];
+                    if (cell.children.length > 0) {
+                        const child = cell.children[0];
+                        if (child.tagName === 'INPUT' || child.tagName === 'SELECT') {
+                            rowText += child.value ? child.value.trim() : '';
+                        } else if (child.tagName === 'TEXTAREA') {
+                            let tempText = rowText;
+                            rowText = '';
+                            let textAreaValue = child.value.trim();
+                            // Append each line of textarea value to tempText
+                            textAreaValue.split('\n').forEach(line => {
+                                rowText += tempText + line + '\n';
+                            });
+                        } else {
+                            rowText += cell.textContent.trim();
+                        }
+                    } else {
+                        rowText += cell.textContent.trim();
+                    }
+                    if (j < cells.length - 1) rowText += ' ';
+                }
+                if (rowText) headerText += rowText.trim() + '\n';
+            }
+            let formattedText = headerText + '\n';
+            // Define fixed widths for each column (in order)
+            const columnWidths = [5, 6, 3, 11, 5, 13, 4, 4, 13, 4, 4];
+            const pad = (str, len) => (str + ' '.repeat(len)).slice(0, len);
+
+            const table = document.getElementById('cabrilloBodyTable');
+            for (let i = 2; i < table.rows.length; i++) { // skip header rows
+                const cells = table.rows[i].cells;
+                let rowText = '';
+                for (let j = 0; j < cells.length; j++) {
+                    rowText += pad(cells[j].textContent.trim(), columnWidths[j]);
+                }
+                formattedText += rowText + '\n';
+            }
+            // Add the END-OF-LOG line
+            formattedText += 'END-OF-LOG:\n';
+            return formattedText;
+        }
+
+        function populateExchangeFields(parsedAdif) {
+            let fieldNames = [];
+            if (parsedAdif.records && parsedAdif.records.length > 0) {
+                // Collect all unique field names from the first record
+                fieldNames = Object.keys(parsedAdif.records[0]);
+            }
+            fieldNames.forEach(field => {
+                const option1 = document.createElement('option');
+                option1.value = field;
+                option1.textContent = field;
+                const option2 = document.createElement('option');
+                option2.value = field;
+                option2.textContent = field;
+            });
+        }
+
+        function submitExchangeFields() {
+            alert(`Exchange Sent Field: ${sentField}\nExchange Received Field: ${receivedField}`);
+            // You can process these values further as needed
+        }
+    </script>
+</body>
+
+</html>
