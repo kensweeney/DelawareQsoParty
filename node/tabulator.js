@@ -252,7 +252,9 @@ function scoreLog(location, qsoRecords, categoryPower) {
   const powerMultiplier = getPowerMultiplier(categoryPower);
 
   if (DELAWARE_LOCATIONS.has(normalizedLocation)) {
-    const multipliers = [...new Set(qsoLocations.map(normalizeSection))].sort();
+    const multipliers = [...new Set(
+      uniqueQsos.map((qso) => `${normalizeSection(qso.toLoc)}/${qso.band}`)
+    )].sort();
     const totalScore = powerMultiplier * totalQsoMultiplier * multipliers.length;
     return {
       scheme: 'Delaware',
@@ -266,9 +268,12 @@ function scoreLog(location, qsoRecords, categoryPower) {
   }
 
   const multipliers = [...new Set(
-    qsoLocations
-      .map((value) => (value ?? '').trim().toUpperCase())
-      .filter((value) => DELAWARE_LOCATIONS.has(value))
+    uniqueQsos
+      .map((qso) => {
+        const loc = (qso.toLoc ?? '').trim().toUpperCase();
+        return DELAWARE_LOCATIONS.has(loc) ? `${loc}/${qso.band}` : null;
+      })
+      .filter(Boolean)
   )].sort();
 
   const adjustedTotalQsoMultiplier = totalQsoMultiplier * 10;  // Multiply by 10 for non-Delaware
