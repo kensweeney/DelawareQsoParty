@@ -53,7 +53,7 @@ const SECTION_LOOKUP = new Map([
   ['ONE', 'ON'],
   ['ONN', 'ON'],
   ['ONS', 'ON'],
-  // Delaware sections are all treated as DE for scoring purposes
+  // Delaware counties are all treated as DE for scoring purposes
   ['NDE', 'DE'],
   ['KDE', 'DE'],
   ['SDE', 'DE'],
