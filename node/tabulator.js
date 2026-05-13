@@ -7,47 +7,57 @@ const VALID_MODES = new Map([
   ['CW', 2],   // Morse = 2 points
   ['RY', 2],   // Digital = 2 points
 ]);
-const VALID_SECTIONS = new Set([
-  // US States (by state or ARRL sections)
-  'AL', 'AK', 'AZ', 'AR', 'CO', 'CT', 'DE', 'GA', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'ND', 'OH', 'OK', 'RI', 'SC', 'SD', 'TN', 'UT', 'VT', 'WV', 'WI', 'WY',
-  // California Sections
-  'CA', 'EB', 'LAX', 'ORG', 'SV', 'SDG', 'SF', 'SJV', 'SB', 'SCV',
-  // Florida Sections
-  'FL', 'NFL', 'SFL', 'WCF',
-  // Hawaii/Pacific
-  'HI', 'PAC',
-  // Maryland/DC
-  'MD', 'DC', 'MDC',
-  // Massachusetts Sections
-  'MA', 'EMA', 'WMA',
-  // New Jersey Sections
-  'NJ', 'NNJ', 'SNJ',
-  // New Mexico
-  'NM',
-  // New York Sections
-  'NY', 'ENY', 'NNY', 'WNY', 'NLI',
-  // North Carolina
-  'NC',
-  // Oregon
-  'OR',
-  // Pennsylvania Sections
-  'PA', 'EPA', 'WPA',
-  // Puerto Rico
-  'PR',
-  // Texas Sections
-  'TX', 'NTX', 'STX', 'WTX',
-  // Virginia
-  'VA',
-  // Washington Sections
-  'WA','EWA', 'WWA',
-  // US Virgin Islands
-  'VI',
-  // Canadian Provinces
-  'AB', 'BC', 'GH', 'MB', 'NB', 'NL', 'NS', 'ONE', 'ONN', 'ONS', 'PE', 'QC', 'SK',
-  // Territories
-  'TER', 'NT', 'YT', 'NU',
-  // International
-  'DX'
+
+const US_STATES = new Set([
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+]);
+
+const US_TERRITORIES = new Set([
+  'DC', 'AS', 'GU', 'MP', 'PR', 'VI'
+]);
+
+const CANADIAN_PROVINCES_TERRITORIES = new Set([
+  'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'ON', 'PE', 'QC', 'SK', 'NT', 'YT', 'NU'
+]);
+
+const VALID_SECTIONS = new Set(['DX', ...US_STATES, ...US_TERRITORIES, ...CANADIAN_PROVINCES_TERRITORIES]);
+
+const SECTION_LOOKUP = new Map([
+  ['EB', 'CA'],
+  ['LAX', 'CA'],
+  ['ORG', 'CA'],
+  ['SV', 'CA'],
+  ['SDG', 'CA'],
+  ['SF', 'CA'],
+  ['SJV', 'CA'],
+  ['SB', 'CA'],
+  ['SCV', 'CA'],
+  ['NFL', 'FL'],
+  ['SFL', 'FL'],
+  ['WCF', 'FL'],
+  ['EMA', 'MA'],
+  ['WMA', 'MA'],
+  ['NNJ', 'NJ'],
+  ['SNJ', 'NJ'],
+  ['ENY', 'NY'],
+  ['NNY', 'NY'],
+  ['WNY', 'NY'],
+  ['NLI', 'NY'],
+  ['EPA', 'PA'],
+  ['WPA', 'PA'],
+  ['NTX', 'TX'],
+  ['STX', 'TX'],
+  ['WTX', 'TX'],
+  ['EWA', 'WA'],
+  ['WWA', 'WA'],
+  ['ONE', 'ON'],
+  ['ONN', 'ON'],
+  ['ONS', 'ON'],
+  // Delaware sections are all treated as DE for scoring purposes
+  ['NDE', 'DE'],
+  ['KDE', 'DE'],
+  ['SDE', 'DE'],
+ 
 ]);
 
 function parseCabrilloFiles(directory) {
@@ -62,6 +72,7 @@ function parseCabrilloFiles(directory) {
   }
 
   for (const file of files) {
+    console.log(`Processing file: ${file}`);
     const filePath = path.join(directory, file);
 
     // Skip directories
@@ -188,6 +199,12 @@ function frequencyToBand(frequency) {
 
 function normalizeSection(value) {
   const normalized = (value ?? '').trim().toUpperCase();
+
+  // Check SECTION_LOOKUP first to handle alternative section codes (e.g., NDE -> DE)
+  if (SECTION_LOOKUP.has(normalized)) {
+    return SECTION_LOOKUP.get(normalized);
+  }
+
   return VALID_SECTIONS.has(normalized) ? normalized : 'DX';
 }
 
@@ -228,12 +245,16 @@ function getPowerMultiplier(categoryPower) {
 function scoreLog(location, qsoRecords, categoryPower) {
   const normalizedLocation = (location ?? '').trim().toUpperCase();
   const uniqueQsoMap = new Map();
+  let duplicateQsoCount = 0;
 
   for (const qso of qsoRecords) {
     if (!qso.band || !qso.toCall) continue;
     const key = `${qso.toCall}|${qso.band}`;
     if (!uniqueQsoMap.has(key)) {
       uniqueQsoMap.set(key, qso);
+    } else {
+      duplicateQsoCount += 1;
+      console.log(`Duplicate QSO found for ${qso.toCall} on ${qso.band} - ignoring duplicate`);
     }
   }
 
@@ -258,6 +279,7 @@ function scoreLog(location, qsoRecords, categoryPower) {
     const totalScore = powerMultiplier * totalQsoMultiplier * multipliers.length;
     return {
       scheme: 'Delaware',
+      duplicateQsoCount,
       powerMultiplier,
       totalQsoMultiplier,
       multiplierLabel: 'States/Provinces',
@@ -281,6 +303,7 @@ function scoreLog(location, qsoRecords, categoryPower) {
 
   return {
     scheme: 'Non-Delaware',
+    duplicateQsoCount,
     powerMultiplier,
     totalQsoMultiplier: adjustedTotalQsoMultiplier,
     multiplierLabel: 'Delaware Counties',
@@ -332,11 +355,13 @@ if (results.length === 0) {
     console.log(`  Category-Power:  ${categoryPower}`);
     console.log(`  Club:            ${club}`);
     console.log(`  Scoring:         ${scoring.scheme}`);
+    console.log(`  Duplicate QSOs:  ${scoring.duplicateQsoCount}`);
     console.log(`  Power Multiplier: ${scoring.powerMultiplier}x (${categoryPower})`);
     console.log(`  Total-QSO Points: ${scoring.totalQsoMultiplier}`);
     console.log(`  ${scoring.multiplierLabel}: ${scoring.multiplierCount}`);
     console.log(`  Multipliers:     ${scoring.multipliers.join(', ') || '(none)'}`);
     console.log(`  Total Score:     ${scoring.totalScore}`);
+    console.log(`  Bonus +50:       ${scoring.totalScore + 50}`);
     console.log(`  Soapbox:         ${soapboxLines[0]}`);
     for (let i = 1; i < soapboxLines.length; i++) {
       console.log(`                   ${soapboxLines[i]}`);
