@@ -97,6 +97,7 @@ function parseCabrilloFiles(directory) {
     let categoryOperator = null;
     let categoryPower = null;
     let club = null;
+    let name = null;
     let soapbox = null;
     const qsoRecords = [];
 
@@ -125,6 +126,10 @@ function parseCabrilloFiles(directory) {
         const m = line.match(/^CLUB:\s*(.+)/i);
         if (m) club = m[1].trim();
       }
+      if (!name) {
+        const m = line.match(/^NAME:\s*(.+)/i);
+        if (m) name = m[1].trim();
+      }
       if (!soapbox) {
         const m = line.match(/^SOAPBOX:\s*(.*)/i);
         if (m) soapbox = m[1].trim();
@@ -148,6 +153,7 @@ function parseCabrilloFiles(directory) {
       categoryOperator: categoryOperator ?? '(not found)',
       categoryPower,
       club:             club             ?? '(not found)',
+      name:             name             ?? '(not found)',
       soapbox:          soapbox          ?? '(not found)',
       scoring,
     });
@@ -244,14 +250,26 @@ function getPowerMultiplier(categoryPower) {
 
 function scoreLog(location, qsoRecords, categoryPower) {
   const normalizedLocation = (location ?? '').trim().toUpperCase();
+  const isDelawareStation = DELAWARE_LOCATIONS.has(normalizedLocation);
   const uniqueQsoMap = new Map();
   let duplicateQsoCount = 0;
+  let qsoCounter = 0;
 
+  const filteredQsoSet = [];
   for (const qso of qsoRecords) {
+    if (isDelawareStation) {
+      filteredQsoSet.push(qso);
+    } else if (DELAWARE_LOCATIONS.has((qso.toLoc ?? '').trim().toUpperCase())) {
+      filteredQsoSet.push(qso);
+    }
+  }
+
+  for (const qso of filteredQsoSet) {
     if (!qso.band || !qso.toCall) continue;
     const key = `${qso.toCall}|${qso.band}`;
     if (!uniqueQsoMap.has(key)) {
       uniqueQsoMap.set(key, qso);
+      qsoCounter += 1;
     } else {
       duplicateQsoCount += 1;
       console.log(`Duplicate QSO found for ${qso.toCall} on ${qso.band} - ignoring duplicate`);
@@ -259,7 +277,6 @@ function scoreLog(location, qsoRecords, categoryPower) {
   }
 
   const uniqueQsos = [...uniqueQsoMap.values()];
-  const qsoLocations = uniqueQsos.map((qso) => qso.toLoc);
   
   // Calculate Total-QSO Mult: PH = 1 point, CW/RY = 2 points each
   let totalQsoMultiplier = 0;
@@ -279,6 +296,7 @@ function scoreLog(location, qsoRecords, categoryPower) {
     const totalScore = powerMultiplier * totalQsoMultiplier * multipliers.length;
     return {
       scheme: 'Delaware',
+      qsoCounter,
       duplicateQsoCount,
       powerMultiplier,
       totalQsoMultiplier,
@@ -303,6 +321,7 @@ function scoreLog(location, qsoRecords, categoryPower) {
 
   return {
     scheme: 'Non-Delaware',
+    qsoCounter,
     duplicateQsoCount,
     powerMultiplier,
     totalQsoMultiplier: adjustedTotalQsoMultiplier,
@@ -339,15 +358,23 @@ if (!directory) {
   process.exit(1);
 }
 
+//I need to parent directory of directory to place the csv file there, so I will use path.dirname to get the parent directory
+const parentDirectory = path.resolve(directory, '..');
+
+//create a csv file named scoring,csv for output
+const csvFile = path.resolve(parentDirectory, 'scoring.csv');
+const csvStream = fs.createWriteStream(csvFile);
+csvStream.write('Name,Callsign,Contest,Location,Category-Op,Category-Power,Club,Unique QSOs,Duplicate QSOs,Power Multiplier,Total-QSO Points,Multiplier Label,Multiplier Count,Multipliers,Total Score\n');
+
 const results = parseCabrilloFiles(path.resolve(directory));
 
 if (results.length === 0) {
   console.log('No Cabrillo log files found in the specified directory.');
 } else {
   console.log(`\nFound ${results.length} Cabrillo log file(s):\n`);
-  for (const { file, callsign, contest, location, categoryOperator, categoryPower, club, soapbox, scoring } of results) {
+  for (const { callsign, name, contest, location, categoryOperator, categoryPower, club, soapbox, scoring } of results) {
     const soapboxLines = soapbox !== '(not found)' ? wrapText(soapbox, 40) : ['(not found)'];
-    console.log(`File:              ${file}`);
+    console.log(`Name:              ${name}`);
     console.log(`  Callsign:        ${callsign}`);
     console.log(`  Contest:         ${contest}`);
     console.log(`  Location:        ${location}`);
@@ -355,6 +382,7 @@ if (results.length === 0) {
     console.log(`  Category-Power:  ${categoryPower}`);
     console.log(`  Club:            ${club}`);
     console.log(`  Scoring:         ${scoring.scheme}`);
+    console.log(`  Unique QSOs:     ${scoring.qsoCounter}`);
     console.log(`  Duplicate QSOs:  ${scoring.duplicateQsoCount}`);
     console.log(`  Power Multiplier: ${scoring.powerMultiplier}x (${categoryPower})`);
     console.log(`  Total-QSO Points: ${scoring.totalQsoMultiplier}`);
@@ -367,5 +395,12 @@ if (results.length === 0) {
       console.log(`                   ${soapboxLines[i]}`);
     }
     console.log();
+      // write this data to the csv file
+    csvStream.write(`${name},${callsign},${contest},${location},${categoryOperator},${categoryPower},${club},${scoring.qsoCounter},${scoring.duplicateQsoCount},${scoring.powerMultiplier},${scoring.totalQsoMultiplier},${scoring.multiplierLabel},${scoring.multiplierCount},"${scoring.multipliers.join('; ')}",${scoring.totalScore + 50}\n`);
+
   }
+
+
 }
+
+csvStream.end();
