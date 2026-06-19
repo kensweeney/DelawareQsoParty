@@ -124,11 +124,13 @@ function parseCabrilloFiles(directory) {
       }
       if (!club) {
         const m = line.match(/^CLUB:\s*(.+)/i);
-        if (m) club = m[1].trim();
+        //lets replace all commas in the club field to avoid issues with csv output  
+        if (m) club = m[1].trim().replace(/,/g, '');
       }
       if (!name) {
         const m = line.match(/^NAME:\s*(.+)/i);
-        if (m) name = m[1].trim();
+        //lets replace all commas in the name field to avoid issues with csv output  
+        if (m) name = m[1].trim().replace(/,/g, '');
       }
       if (!soapbox) {
         const m = line.match(/^SOAPBOX:\s*(.*)/i);
@@ -254,6 +256,9 @@ function scoreLog(location, qsoRecords, categoryPower) {
   const uniqueQsoMap = new Map();
   let duplicateQsoCount = 0;
   let qsoCounter = 0;
+  let phoneQsoCount = 0;
+  let cwQsoCount = 0;
+  let digitalQsoCount = 0;
 
   const filteredQsoSet = [];
   for (const qso of qsoRecords) {
@@ -283,6 +288,11 @@ function scoreLog(location, qsoRecords, categoryPower) {
   for (const qso of uniqueQsos) {
     const mode = (qso.mode ?? '').trim().toUpperCase();
     const weight = VALID_MODES.has(mode) ? VALID_MODES.get(mode) : 0;
+    if (weight > 0) {
+      if (mode === 'PH') phoneQsoCount += 1;
+      else if (mode === 'CW') cwQsoCount += 1;
+      else if (mode === 'RY') digitalQsoCount += 1;
+    }
     totalQsoMultiplier += weight;
   }
 
@@ -302,6 +312,9 @@ function scoreLog(location, qsoRecords, categoryPower) {
       totalQsoMultiplier,
       multiplierLabel: 'States/Provinces',
       multiplierCount: multipliers.length,
+      phoneQsoCount,
+      cwQsoCount,
+      digitalQsoCount,
       multipliers,
       totalScore,
     };
@@ -328,6 +341,9 @@ function scoreLog(location, qsoRecords, categoryPower) {
     multiplierLabel: 'Delaware Counties',
     multiplierCount: multipliers.length,
     multipliers,
+    phoneQsoCount,
+    cwQsoCount,
+    digitalQsoCount,
     totalScore,
   };
 }
@@ -364,7 +380,7 @@ const parentDirectory = path.resolve(directory, '..');
 //create a csv file named scoring,csv for output
 const csvFile = path.resolve(parentDirectory, 'scoring.csv');
 const csvStream = fs.createWriteStream(csvFile);
-csvStream.write('Name,Callsign,Contest,Location,Category-Op,Category-Power,Club,Unique QSOs,Duplicate QSOs,Power Multiplier,Total-QSO Points,Multiplier Label,Multiplier Count,Multipliers,Total Score\n');
+csvStream.write('Name,Callsign,Contest,Location,Category-Op,Category-Power,Club,Unique QSOs,Duplicate QSOs,Power Multiplier,Total-QSO Points,Multiplier Label,Multiplier Count,Phone QSOs,CW QSOs,Digital QSOs,Total Score\n');
 
 const results = parseCabrilloFiles(path.resolve(directory));
 
@@ -388,6 +404,9 @@ if (results.length === 0) {
     console.log(`  Total-QSO Points: ${scoring.totalQsoMultiplier}`);
     console.log(`  ${scoring.multiplierLabel}: ${scoring.multiplierCount}`);
     console.log(`  Multipliers:     ${scoring.multipliers.join(', ') || '(none)'}`);
+    console.log(`  Phone QSOs:      ${scoring.phoneQsoCount}`);
+    console.log(`  CW QSOs:         ${scoring.cwQsoCount}`);
+    console.log(`  Digital QSOs:    ${scoring.digitalQsoCount}`);
     console.log(`  Total Score:     ${scoring.totalScore}`);
     console.log(`  Bonus +50:       ${scoring.totalScore + 50}`);
     console.log(`  Soapbox:         ${soapboxLines[0]}`);
@@ -396,7 +415,7 @@ if (results.length === 0) {
     }
     console.log();
       // write this data to the csv file
-    csvStream.write(`${name},${callsign},${contest},${location},${categoryOperator},${categoryPower},${club},${scoring.qsoCounter},${scoring.duplicateQsoCount},${scoring.powerMultiplier},${scoring.totalQsoMultiplier},${scoring.multiplierLabel},${scoring.multiplierCount},"${scoring.multipliers.join('; ')}",${scoring.totalScore + 50}\n`);
+    csvStream.write(`${name},${callsign},${contest},${location},${categoryOperator},${categoryPower},${club},${scoring.qsoCounter},${scoring.duplicateQsoCount},${scoring.powerMultiplier},${scoring.totalQsoMultiplier},${scoring.multiplierLabel},${scoring.multiplierCount},${scoring.phoneQsoCount},${scoring.cwQsoCount},${scoring.digitalQsoCount},${scoring.totalScore + 50}\n`);
 
   }
 
